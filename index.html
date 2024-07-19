@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>人工言語生成ツール</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      width: 80%;
+      margin: 0 auto;
+    }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    #generateBtn, #downloadBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #generateBtn:hover, #downloadBtn:hover {
+      background-color: #0056b3;
+    }
+    pre {
+      background-color: #f8f8f8;
+      padding: 10px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>人工言語生成ツール</h1>
+    <div class="input-group">
+      <label for="minLength">最小文字数</label>
+      <input type="number" id="minLength" min="1" value="2">
+    </div>
+    <div class="input-group">
+      <label for="maxLength">最大文字数</label>
+      <input type="number" id="maxLength" min="1" value="5">
+    </div>
+    <div class="input-group">
+      <label for="syllableStructure">音節構造 (例: CVC, CV, VC)</label>
+      <input type="text" id="syllableStructure" value="CVC">
+    </div>
+    <div class="input-group">
+      <label for="consonants">子音 (カンマ区切りで指定)</label>
+      <input type="text" id="consonants" value="k,s,t,n,h,m,y,r,w">
+    </div>
+    <div class="input-group">
+      <label for="vowels">母音 (カンマ区切りで指定)</label>
+      <input type="text" id="vowels" value="a,i,u,e,o">
+    </div>
+    <button id="generateBtn">単語生成</button>
+    <button id="downloadBtn">JSONをダウンロード</button>
+    <h2>MediaWiki テーブル</h2>
+    <pre id="mediaWikiOutput"></pre>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const generateBtn = document.getElementById('generateBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const mediaWikiOutput = document.getElementById('mediaWikiOutput');
+
+      function generateArtificialWord(minLength, maxLength, syllableStructure, consonants, vowels) {
+        const length = Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
+        let word = '';
+        
+        const structure = syllableStructure.split(',');
+        
+        for (let i = 0; i < length; i++) {
+          const pattern = structure[i % structure.length];
+          
+          pattern.split('').forEach(char => {
+            if (char === 'C') {
+              word += consonants[Math.floor(Math.random() * consonants.length)];
+            } else if (char === 'V') {
+              word += vowels[Math.floor(Math.random() * vowels.length)];
+            }
+          });
+        }
+        return word;
+      }
+
+      function generateWords() {
+        const minLength = parseInt(document.getElementById('minLength').value, 10);
+        const maxLength = parseInt(document.getElementById('maxLength').value, 10);
+        const syllableStructure = document.getElementById('syllableStructure').value;
+        const consonants = document.getElementById('consonants').value.split(',').map(c => c.trim());
+        const vowels = document.getElementById('vowels').value.split(',').map(v => v.trim());
+
+        const words = [];
+        for (let i = 0; i < 64; i++) {
+          const word = generateArtificialWord(minLength, maxLength, syllableStructure, consonants, vowels);
+          words.push({ entry: { id: i + 1, form: word } });
+        }
+
+        const json = {
+          words: words,
+          version: 2,
+          settings: {
+            zpdic: {
+              pronounciationTitle: "発音",
+            },
+            zpdicOnline: {
+              enableMarkdown: true
+            }
+          }
+        };
+
+        const jsonBlob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(jsonBlob);
+        downloadBtn.href = url;
+        downloadBtn.download = 'words.json';
+
+        const tableData = words.map(word => `| ${word.entry.form} ||\n`).join('');
+        mediaWikiOutput.textContent = `{| class="wikitable"\n|-\n${tableData}|}`;
+      }
+
+      generateBtn.addEventListener('click', generateWords);
+    });
+  </script>
+</body>
+</html>
